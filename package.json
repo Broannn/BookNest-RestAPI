@@ -1,14 +1,16 @@
 {
   "name": "booknest-restapi",
   "version": "1.0.0",
+  "description": "project on a course of the heig-vd in archioweb",
   "main": "app.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
+    "test": "jest --detectOpenHandles"
   },
   "keywords": [],
-  "author": "",
+  "author": "nathan stader, maxime peretti, leo winterhalter",
   "license": "ISC",
-  "description": "",
   "dependencies": {
     "bcrypt": "^5.1.1",
     "express": "^4.21.1",
