@@ -16,5 +16,8 @@
     "lodash": "^4.17.21",
     "mongodb": "^6.10.0",
     "mongoose": "^8.7.3"
+  },
+  "devDependencies": {
+    "dotenv": "^16.4.5"
   }
 }
