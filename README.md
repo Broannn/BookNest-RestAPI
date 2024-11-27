@@ -16,3 +16,5 @@ Pour savoir ou aller lire ce dernier roman dont vous ne pouvez vous passer.
 
 - **Node.js** et **npm**
 - **MongoDB** (local ou distant)
+
+Pour lancer : DEBUG=demo:* npm start

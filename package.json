@@ -1,23 +1,33 @@
 {
   "name": "booknest-restapi",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "project on a course of the heig-vd in archioweb",
   "main": "app.js",
+  "type": "module",
   "scripts": {
-    "start": "node src/server.js",
-    "dev": "nodemon src/server.js",
-    "test": "jest --detectOpenHandles"
+    "apidoc": "apidoc -i routes -o docs",
+    "apidoc:watch": "onchange APIDOC.md routes/**/*.js -- npm run apidoc",
+    "start": "node ./bin/www.js",
+    "dev": "nodemon ./app.js",
+    "test": "cross-env NODE_ENV=test NODE_OPTIONS=--experimental-vm-modules jest",
+    "nodemon": "DEBUG=demo:* AUTH_TOKEN=secret nodemon",
+    "format": "prettier --config ./.prettierrc.yml --check .",
+    "format:write": "prettier --config ./.prettierrc.yml --write ."
   },
   "keywords": [],
   "author": "nathan stader, maxime peretti, leo winterhalter",
   "license": "ISC",
   "dependencies": {
+    "apidoc": "^1.2.0",
     "bcrypt": "^5.1.1",
     "express": "^4.21.1",
+    "format-link-header": "^3.1.1",
     "jsonwebtoken": "^9.0.2",
     "lodash": "^4.17.21",
     "mongodb": "^6.10.0",
-    "mongoose": "^8.7.3"
+    "mongoose": "^8.7.3",
+    "morgan": "^1.10.0",
+    "pug": "^3.0.3"
   },
   "devDependencies": {
     "dotenv": "^16.4.5"
