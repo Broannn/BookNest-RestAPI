@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 // Wishlist Schema
 const wishlistSchema = new mongoose.Schema({
@@ -14,20 +14,4 @@ const wishlistSchema = new mongoose.Schema({
   }
 }, { timestamps: true });
 
-export const Wishlist = mongoose.model('Wishlist', wishlistSchema);
-
-// AlreadyRead Schema
-const alreadyReadSchema = new mongoose.Schema({
-  user_id: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
-  },
-  book_id: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Book',
-    required: true
-  }
-}, { timestamps: true });
-
-export const AlreadyRead = mongoose.model('AlreadyRead', alreadyReadSchema);
+export default mongoose.model('Wishlist', wishlistSchema);

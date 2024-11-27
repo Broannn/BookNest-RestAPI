@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 // Book_Genre Schema (relationship between Book and Genre)
 const bookGenreSchema = new mongoose.Schema({
     book_id: {
@@ -13,4 +13,4 @@ const bookGenreSchema = new mongoose.Schema({
     }
   }, { timestamps: true });
   
-  export const BookGenre = mongoose.model('BookGenre', bookGenreSchema);
+  export default mongoose.model('BookGenre', bookGenreSchema);

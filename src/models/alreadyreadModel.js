@@ -1,6 +1,5 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
-// AlreadyRead Schema
 const alreadyReadSchema = new mongoose.Schema({
     user_id: {
       type: mongoose.Schema.Types.ObjectId,
@@ -14,4 +13,4 @@ const alreadyReadSchema = new mongoose.Schema({
     }
   }, { timestamps: true });
   
-  export const AlreadyRead = mongoose.model('AlreadyRead', alreadyReadSchema);
+  export default mongoose.model('AlreadyRead', alreadyReadSchema);
