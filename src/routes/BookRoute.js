@@ -18,7 +18,20 @@ import {
   getDiscussionsByBookOfDay,
 } from "../services/bookOfDayService.js";
 import Critique from '../models/critiqueModel.js';
-import { addCritique, getCritiquesByBook, getCritiqueByUserAndBook, updateCritique, deleteCritique } from '../services/critiqueService.js';
+import {
+  addCritique,
+  getCritiquesByBook,
+  getCritiqueByUserAndBook,
+  updateCritique,
+  deleteCritique
+} from '../services/critiqueService.js';
+
+import {
+  authorizeOwner
+} from '../middlewares/authMiddleware.js';
+import {
+  authenticate
+} from '../middlewares/authenticate.js'; // Middleware pour vérifier le JWT
 
 
 const debug = debugLib("app:books");
@@ -65,7 +78,12 @@ router.get("/", (req, res, next) => {
         pages: Math.ceil(total / limit),
       }));
     })
-    .then(({ books, total, page, pages }) => {
+    .then(({
+      books,
+      total,
+      page,
+      pages
+    }) => {
       res.status(200).send({
         books,
         meta: {
@@ -95,40 +113,49 @@ router.get("/:id", (req, res, next) => {
 });
 
 // UPDATE (PUT)
-router.put("/:id", utils.requireJson, (req, res, next) => {
-  Book.findByIdAndUpdate(req.params.id, req.body, {
-    new: true,
-    runValidators: true,
-  })
-    .then((updatedBook) => {
-      if (!updatedBook) {
-        return res.status(404).send({
-          error: "Book not found",
-        });
-      }
-      debug(`Updated book "${updatedBook.title}"`);
-      return updatedBook.populate("author_id genres").execPopulate();
-    })
-    .then((updatedBook) => {
-      res.status(200).send(updatedBook);
-    })
-    .catch(next);
-});
+router.put(
+  '/:id',
+  authenticate, // Vérifie que l'utilisateur est authentifié
+  authorizeOwner('Book'), // Vérifie que l'utilisateur est propriétaire du livre
+  utils.requireJson, // Vérifie que la requête est en JSON
+  (req, res, next) => {
+    Book.findByIdAndUpdate(req.params.id, req.body, {
+        new: true,
+        runValidators: true, // Applique les validations Mongoose
+      })
+      .then((updatedBook) => {
+        if (!updatedBook) {
+          return res.status(404).send({
+            error: 'Book not found'
+          });
+        }
+        return updatedBook.populate('author_id genres').execPopulate();
+      })
+      .then((updatedBook) => {
+        res.status(200).send(updatedBook);
+      })
+      .catch(next);
+  }
+);
 
 // DELETE (DELETE)
-router.delete("/:id", (req, res, next) => {
-  Book.findByIdAndDelete(req.params.id)
-    .then((deletedBook) => {
-      if (!deletedBook) {
-        return res.status(404).send({
-          error: "Book not found",
-        });
-      }
-      debug(`Deleted book "${deletedBook.title}"`);
-      res.status(204).send(); // No content
-    })
-    .catch(next);
-});
+router.delete(
+  '/:id',
+  authenticate, // Vérifie que l'utilisateur est authentifié
+  authorizeOwner('Book'), // Vérifie que l'utilisateur est propriétaire du livre
+  (req, res, next) => {
+    Book.findByIdAndDelete(req.params.id)
+      .then((deletedBook) => {
+        if (!deletedBook) {
+          return res.status(404).send({
+            error: 'Book not found'
+          });
+        }
+        res.status(204).send(); // No content
+      })
+      .catch(next);
+  }
+);
 
 
 
@@ -137,8 +164,12 @@ router.delete("/:id", (req, res, next) => {
 
 // Ajouter un genre à un livre
 router.post("/:bookId/genres", async (req, res, next) => {
-  const { bookId } = req.params;
-  const { genreId } = req.body;
+  const {
+    bookId
+  } = req.params;
+  const {
+    genreId
+  } = req.body;
 
   try {
     const bookGenre = await addGenreToBook(bookId, genreId);
@@ -150,7 +181,9 @@ router.post("/:bookId/genres", async (req, res, next) => {
 
 // Récupérer les genres d'un livre
 router.get("/:bookId/genres", async (req, res, next) => {
-  const { bookId } = req.params;
+  const {
+    bookId
+  } = req.params;
 
   try {
     const genres = await getGenresByBook(bookId);
@@ -162,7 +195,10 @@ router.get("/:bookId/genres", async (req, res, next) => {
 
 // Supprimer un genre d'un livre
 router.delete("/:bookId/genres/:genreId", async (req, res, next) => {
-  const { bookId, genreId } = req.params;
+  const {
+    bookId,
+    genreId
+  } = req.params;
 
   try {
     const result = await BookGenre.removeGenreFromBook({
@@ -180,6 +216,68 @@ router.delete("/:bookId/genres/:genreId", async (req, res, next) => {
   }
 });
 
+router.get('/', (req, res, next) => {
+  const {
+    genre,
+    page = 1,
+    limit = 10
+  } = req.query; // Paramètres de requête
+  const skip = (page - 1) * limit; // Calcul de l'offset
+
+  const genreFilter = genre ?
+    BookGenre.findOne({
+      name: genre
+    }).then((foundGenre) => {
+      if (!foundGenre) {
+        return Promise.reject(new Error('Genre not found'));
+      }
+      return {
+        genre_id: foundGenre._id
+      };
+    }) :
+    Promise.resolve({}); // Pas de filtre si `genre` n'est pas fourni
+
+  genreFilter
+    .then((filter) =>
+      BookGenre.find(filter)
+      .populate('author_id genres') // Inclut les relations
+      .skip(skip)
+      .limit(Number(limit))
+    )
+    .then((books) =>
+      BookGenre.countDocuments().then((total) => ({
+        books,
+        total,
+        page: Number(page),
+        pages: Math.ceil(total / limit),
+      }))
+    )
+    .then(({
+      books,
+      total,
+      page,
+      pages
+    }) => {
+      res.status(200).send({
+        books,
+        meta: {
+          total,
+          page,
+          pages,
+          limit: Number(limit),
+        },
+      });
+    })
+    .catch((err) => {
+      if (err.message === 'Genre not found') {
+        return res.status(404).send({
+          error: err.message
+        });
+      }
+      next(err); // Passer au middleware d'erreur
+    });
+});
+
 
 
 
@@ -187,7 +285,10 @@ router.delete("/:bookId/genres/:genreId", async (req, res, next) => {
 
 // Ajouter un livre du jour
 router.post("/", async (req, res, next) => {
-  const { bookId, date } = req.body;
+  const {
+    bookId,
+    date
+  } = req.body;
 
   try {
     const bookOfDay = await addBookOfDay(bookId, date);
@@ -209,8 +310,13 @@ router.get("/", async (req, res, next) => {
 
 // Ajouter une discussion à un livre du jour
 router.post("/:bookOfDayId/discussions", async (req, res, next) => {
-  const { bookOfDayId } = req.params;
-  const { userId, content } = req.body;
+  const {
+    bookOfDayId
+  } = req.params;
+  const {
+    userId,
+    content
+  } = req.body;
 
   try {
     const discussion = await addDiscussionToBookOfDay(
@@ -226,7 +332,9 @@ router.post("/:bookOfDayId/discussions", async (req, res, next) => {
 
 // Récupérer les discussions d'un livre du jour
 router.get("/:bookOfDayId/discussions", async (req, res, next) => {
-  const { bookOfDayId } = req.params;
+  const {
+    bookOfDayId
+  } = req.params;
 
   try {
     const discussions = await getDiscussionsByBookOfDay(bookOfDayId);
@@ -242,7 +350,9 @@ router.get("/:bookOfDayId/discussions", async (req, res, next) => {
 
 // Route : Récupérer toutes les critiques pour un livre
 router.get('/:bookId/critiques', async (req, res, next) => {
-  const { bookId } = req.params;
+  const {
+    bookId
+  } = req.params;
 
   try {
     const critiques = await getCritiquesByBook(bookId);
@@ -254,8 +364,14 @@ router.get('/:bookId/critiques', async (req, res, next) => {
 
 // Route : Ajouter une critique pour un livre
 router.post('/:bookId/critiques', async (req, res, next) => {
-  const { userId, rating, comment } = req.body;
-  const { bookId } = req.params;
+  const {
+    userId,
+    rating,
+    comment
+  } = req.body;
+  const {
+    bookId
+  } = req.params;
 
   try {
     const critique = await addCritique(userId, bookId, rating, comment);
@@ -267,14 +383,19 @@ router.post('/:bookId/critiques', async (req, res, next) => {
 
 // Route : Récupérer la critique d'un utilisateur pour un livre
 router.get('/:bookId/critiques/user/:userId', async (req, res, next) => {
-  const { bookId, userId } = req.params;
+  const {
+    bookId,
+    userId
+  } = req.params;
 
   try {
     const critique = await getCritiqueByUserAndBook(userId, bookId);
     if (critique) {
       res.status(200).send(critique);
     } else {
-      res.status(404).send({ message: 'Critique not found' });
+      res.status(404).send({
+        message: 'Critique not found'
+      });
     }
   } catch (err) {
     next(err);
@@ -283,8 +404,13 @@ router.get('/:bookId/critiques/user/:userId', async (req, res, next) => {
 
 // Route : Mettre à jour une critique pour un livre
 router.put('/critiques/:critiqueId', async (req, res, next) => {
-  const { critiqueId } = req.params;
-  const { rating, comment } = req.body;
+  const {
+    critiqueId
+  } = req.params;
+  const {
+    rating,
+    comment
+  } = req.body;
 
   try {
     const updatedCritique = await updateCritique(critiqueId, rating, comment);
@@ -296,7 +422,9 @@ router.put('/critiques/:critiqueId', async (req, res, next) => {
 
 // Route : Supprimer une critique pour un livre
 router.delete('/critiques/:critiqueId', async (req, res, next) => {
-  const { critiqueId } = req.params;
+  const {
+    critiqueId
+  } = req.params;
 
   try {
     await deleteCritique(critiqueId);
@@ -313,7 +441,10 @@ router.delete('/critiques/:critiqueId', async (req, res, next) => {
 
 // Ajouter un livre du jour
 router.post("/livres-du-jour", async (req, res, next) => {
-  const { bookId, date } = req.body;
+  const {
+    bookId,
+    date
+  } = req.body;
 
   try {
     const bookOfDay = await addBookOfDay(bookId, date);
@@ -335,8 +466,13 @@ router.get("/livres-du-jour", async (req, res, next) => {
 
 // Ajouter une discussion à un livre du jour
 router.post("/livres-du-jour/:bookOfDayId/discussions", async (req, res, next) => {
-  const { bookOfDayId } = req.params;
-  const { userId, content } = req.body;
+  const {
+    bookOfDayId
+  } = req.params;
+  const {
+    userId,
+    content
+  } = req.body;
 
   try {
     const discussion = await addDiscussionToBookOfDay(bookOfDayId, userId, content);
@@ -348,7 +484,9 @@ router.post("/livres-du-jour/:bookOfDayId/discussions", async (req, res, next) =
 
 // Récupérer les discussions d'un livre du jour
 router.get("/livres-du-jour/:bookOfDayId/discussions", async (req, res, next) => {
-  const { bookOfDayId } = req.params;
+  const {
+    bookOfDayId
+  } = req.params;
 
   try {
     const discussions = await getDiscussionsByBookOfDay(bookOfDayId);
@@ -357,5 +495,9 @@ router.get("/livres-du-jour/:bookOfDayId/discussions", async (req, res, next) =>
     next(err);
   }
 });
+
+
+
+
 
 export default router;
