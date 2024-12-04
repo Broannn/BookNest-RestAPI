@@ -23,6 +23,13 @@ import {
   removeBookFromWishlist
 } from '../services/wishlistService.js';
 
+import {
+  authorizeUser
+} from '../middlewares/authMiddleware.js';
+import {
+  authenticate
+} from '../middlewares/authenticate.js'; // Middleware pour vérifier le JWT
+
 
 const debug = debugLib('app:users');
 const router = express.Router();

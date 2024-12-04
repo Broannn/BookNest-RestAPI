@@ -1,5 +1,5 @@
 import jwt from 'jsonwebtoken';
-import { authToken } from '../config.js';
+import { authToken } from '../../config.js';
 
 export const authenticate = (req, res, next) => {
   const token = req.headers.authorization?.split(' ')[1]; // Récupère le token Bearer

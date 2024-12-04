@@ -15,7 +15,7 @@ const debug = debugFactory('officiel:server');
 // Generate apiDoc documentation on startup.
 const docsDest = path.join(config.projectRoot, 'docs');
 apiDoc.createDoc({
-    src: [path.join(config.projectRoot, 'routes')],
+    src: [path.join(config.projectRoot, 'src/routes')],
     dest: docsDest
 });
 debug(`Generated apiDoc documentation into ./${path.relative(config.projectRoot, docsDest)}`);
