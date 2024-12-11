@@ -37,8 +37,8 @@ export const authorizeOwner = (modelName) => {
 
 export const authorizeUser = (req, res, next) => {
   const { id } = req.params; // ID de l'utilisateur ciblé
-  if (req.user.userId !== id) {
-    return res.status(403).send({ error: 'Forbidden: You do not have permission to perform this action' });
+  if (req.currentUserId !== id) {
+    return res.status(403).send({ error: 'Forbidden: You do not have permission to perform this action' + req.currentUserId });
   }
   next();
 };

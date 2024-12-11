@@ -1,17 +1,36 @@
 import jwt from 'jsonwebtoken';
-import { authToken } from '../../config.js';
 
-export const authenticate = (req, res, next) => {
-  const token = req.headers.authorization?.split(' ')[1]; // Récupère le token Bearer
-  if (!token) {
-    return res.status(401).send({ error: 'Unauthorized: No token provided' });
-  }
-
-  try {
-    const decoded = jwt.verify(token, authToken);
-    req.user = decoded; // Ajouter l'utilisateur décodé à la requête
-    next();
-  } catch (err) {
-    res.status(401).send({ error: 'Unauthorized: Invalid token' });
-  }
+const verifyJwt = (token, secret) => {
+  return new Promise((resolve, reject) => {
+    jwt.verify(token, secret, (err, decoded) => {
+      if (err) {
+        reject(err);
+      } else {
+        resolve(decoded);
+      }
+    });
+  });
 };
+
+export function authenticate(req, res, next) {
+  // Ensure the header is present.
+  const authorization = req.get("Authorization");
+  if (!authorization) {
+    return res.status(401).send("Authorization header is missing");
+  }
+
+  // Check that the header has the correct format.
+  const match = authorization.match(/^Bearer (.+)$/);
+  if (!match) {
+    return res.status(401).send("Authorization header is not a bearer token");
+  }
+  const secretKey = process.env.JWT_SECRET || 'your_secret_key';
+  // Extract and verify the JWT.
+  const token = match[1];
+  verifyJwt(token, secretKey).then(payload => {
+    req.currentUserId = payload.sub; // Pass the ID of the authenticated user to the request.
+    next();
+  }).catch(() => {
+    res.status(401).send("Your token is invalid or has expired");
+  });
+}

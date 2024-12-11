@@ -33,11 +33,17 @@ import {
 
 const debug = debugLib('app:users');
 const router = express.Router();
-
 // CREATE (POST)
 router.post('/', utils.requireJson, (req, res, next) => {
-  new User(req.body)
-    .save()
+  const saltRounds = 10;
+  bcrypt.hash(req.body.password, saltRounds)
+    .then(hashedPassword => {
+      // Replace the plain text password with the hashed one
+      req.body.password = hashedPassword;
+
+      const newUser = new User(req.body);
+      return newUser.save();
+    })
     .then(createdUser => {
       debug(`Created user "${createdUser.username}"`);
       res
@@ -131,52 +137,39 @@ router.delete(
 
 // Route pour le login
 router.post('/login', utils.requireJson, (req, res, next) => {
-  const {
-    email,
-    password
-  } = req.body;
+  const { email, password } = req.body;
 
   // Vérifier si l'utilisateur existe
-  User.findOne({
-      email
-    })
+  User.findOne({ email })
     .then(user => {
       if (!user) {
-        return res.status(400).send({
-          error: 'Utilisateur introuvable.'
-        });
+        return res.status(400).send({ error: 'Utilisateur introuvable.' });
       }
 
-      // Comparer le mot de passe avec celui stocké dans la base de données
-      return bcrypt.compare(password, user.password)
-        .then(isMatch => {
-          if (!isMatch) {
-            return res.status(400).send({
-              error: 'Mot de passe incorrect.'
+      // Hacher le mot de passe envoyé
+          // Comparer le mot de passe haché envoyé avec le mot de passe haché stocké
+          bcrypt.compare(password, user.password)
+            .then(isMatch => {
+              if (!isMatch) {
+                return res.status(400).send({ error: 'Mot de passe incorrect.' });
+              }
+
+              // Créer un token JWT
+              const token = jwt.sign(
+                { sub: user._id, username: user.username },
+                process.env.JWT_SECRET || 'your_secret_key',
+                { expiresIn: '1h' }
+              );
+
+              // Répondre avec le token
+              res.status(200).send({ message: 'Authentification réussie.', token });
             });
-          }
-
-          // Créer un token JWT
-          const token = jwt.sign({
-              userId: user._id,
-              username: user.username
-            },
-            process.env.JWT_SECRET || 'your_secret_key', {
-              expiresIn: '1h'
-            }
-          );
-
-          // Répondre avec le token
-          res.status(200).send({
-            message: 'Authentification réussie.',
-            token
-          });
-        });
     })
     .catch(err => {
       next(err); // Passer l'erreur à l'erreur middleware
     });
 });
+
 
 
 
