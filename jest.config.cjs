@@ -1,5 +1,5 @@
 module.exports = {
-  testEnvironment: 'node',
-  setupFiles: ['dotenv/config'],
-  transform: {},
+  transform: {
+    '^.+\\.jsx?$': 'babel-jest',
+  },
 };
