@@ -1,0 +1,937 @@
+openapi: '3.1.0'
+
+info:
+  title: Comprehensive Books Management REST API
+  description: >-
+    **A REST API for managing Users, Books, Authors, Genres, and their interactions, developed with [Express](https://expressjs.com).**
+
+    This API provides endpoints to manage Users, Books, Authors, Genres, and the relationships between them.
+  version: 1.0.0
+  contact:
+    url: https://github.com/Broannn/BookNest-RestAPI
+
+servers:
+  - url: https://booknest-restapi.onrender.com/
+
+tags:
+  - name: users
+    description: User management
+  - name: books
+    description: Book management
+  - name: authors
+    description: Author management
+  - name: genres
+    description: Genre management
+  - name: interactions
+    description: Managing user interactions with books (favorites, critiques, wishlists, etc.)
+
+paths:
+  /users:
+    post:
+      summary: Create a user.
+      tags:
+        - users
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserData'
+      responses:
+        201:
+          description: The user was successfully created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        422:
+          description: Validation error.
+    get:
+      summary: List users.
+      tags:
+        - users
+      parameters:
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/pageSize'
+      responses:
+        200:
+          description: A list of users.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
+  /users/{userId}: # Corrected indentation
+    get:
+      summary: Get a user by ID.
+      tags:
+        - users
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          description: The ID of the user.
+          schema:
+            type: string
+      responses:
+        200:
+          description: The user details.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        404:
+          description: User not found.
+    put:
+      summary: Update a user.
+      tags:
+        - users
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          description: The ID of the user.
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserData'
+      responses:
+        200:
+          description: User successfully updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        404:
+          description: User not found.
+    delete:
+      summary: Delete a user.
+      tags:
+        - users
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          description: The ID of the user.
+          schema:
+            type: string
+      responses:
+        204:
+          description: User successfully deleted.
+        404:
+          description: User not found.
+
+  /users/{userId}/favorites:
+    post:
+      summary: Add a book to user's favorites.
+      tags:
+        - interactions
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          description: The ID of the user.
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                bookId:
+                  type: string
+                  description: The ID of the book to be added.
+      responses:
+        201:
+          description: Book added to favorites.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Favorite'
+    get:
+      summary: Get user's favorite books.
+      tags:
+        - interactions
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          description: The ID of the user.
+          schema:
+            type: string
+      responses:
+        200:
+          description: A list of favorite books.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Book'
+    delete:
+      summary: Remove a book from user's favorites.
+      tags:
+        - interactions
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          description: The ID of the user.
+          schema:
+            type: string
+        - name: bookId
+          in: path
+          required: true
+          description: The ID of the book to be removed.
+          schema:
+            type: string
+      responses:
+        204:
+          description: Book successfully removed from favorites.
+  /users/{userId}/wishlist:
+    post:
+      summary: Add a book to user's wishlist.
+      tags:
+        - interactions
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          description: The ID of the user.
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                bookId:
+                  type: string
+                  description: The ID of the book to be added.
+      responses:
+        201:
+          description: Book added to wishlist.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Wishlist'
+    get:
+      summary: Get user's wishlist.
+      tags:
+        - interactions
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          description: The ID of the user.
+          schema:
+            type: string
+      responses:
+        200:
+          description: A list of books in the wishlist.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Book'
+    delete:
+      summary: Remove a book from user's wishlist.
+      tags:
+        - interactions
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          description: The ID of the user.
+          schema:
+            type: string
+        - name: bookId
+          in: path
+          required: true
+          description: The ID of the book to be removed.
+          schema:
+            type: string
+      responses:
+        204:
+          description: Book successfully removed from wishlist.
+
+  /  /books:
+    post:
+      summary: Create a book.
+      tags:
+        - books
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BookData'
+      responses:
+        201:
+          description: The book was successfully created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Book'
+    get:
+      summary: List books.
+      tags:
+        - books
+      parameters:
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/pageSize'
+      responses:
+        200:
+          description: A list of books.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Book'
+  /books/{bookId}:
+    get:
+      summary: Get a book by ID.
+      tags:
+        - books
+      parameters:
+        - name: bookId
+          in: path
+          required: true
+          description: The ID of the book.
+          schema:
+            type: string
+      responses:
+        200:
+          description: The book details.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Book'
+        404:
+          description: Book not found.
+    put:
+      summary: Update a book.
+      tags:
+        - books
+      parameters:
+        - name: bookId
+          in: path
+          required: true
+          description: The ID of the book.
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BookData'
+      responses:
+        200:
+          description: Book successfully updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Book'
+        404:
+          description: Book not found.
+    delete:
+      summary: Delete a book.
+      tags:
+        - books
+      parameters:
+        - name: bookId
+          in: path
+          required: true
+          description: The ID of the book.
+          schema:
+            type: string
+      responses:
+        204:
+          description: Book successfully deleted.
+        404:
+          description: Book not found.
+  /books/{bookId}/genres:
+    post:
+      summary: Add a genre to a book.
+      tags:
+        - genres
+      parameters:
+        - name: bookId
+          in: path
+          required: true
+          description: The ID of the book.
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                genreId:
+                  type: string
+                  description: The ID of the genre to add.
+      responses:
+        201:
+          description: Genre added to the book.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookGenre'
+    get:
+      summary: Get genres of a book.
+      tags:
+        - genres
+      parameters:
+        - name: bookId
+          in: path
+          required: true
+          description: The ID of the book.
+          schema:
+            type: string
+      responses:
+        200:
+          description: A list of genres for the book.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Genre'
+    delete:
+      summary: Remove a genre from a book.
+      tags:
+        - genres
+      parameters:
+        - name: bookId
+          in: path
+          required: true
+          description: The ID of the book.
+          schema:
+            type: string
+        - name: genreId
+          in: path
+          required: true
+          description: The ID of the genre to remove.
+          schema:
+            type: string
+      responses:
+        204:
+          description: Genre successfully removed from the book.
+  /books/{bookId}/critiques:
+    get:
+      summary: Get all critiques for a book.
+      tags:
+        - critiques
+      parameters:
+        - name: bookId
+          in: path
+          required: true
+          description: The ID of the book.
+          schema:
+            type: string
+      responses:
+        200:
+          description: A list of critiques for the book.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Critique'
+    post:
+      summary: Add a critique to a book.
+      tags:
+        - critiques
+      parameters:
+        - name: bookId
+          in: path
+          required: true
+          description: The ID of the book.
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                userId:
+                  type: string
+                  description: The ID of the user adding the critique.
+                rating:
+                  type: number
+                  description: The rating given to the book.
+                comment:
+                  type: string
+                  description: The critique comment.
+      responses:
+        201:
+          description: Critique successfully added.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Critique'
+    delete: # Correct indentation here
+      summary: Delete a critique for a book.
+      tags:
+        - critiques
+      parameters:
+        - name: bookId
+          in: path
+          required: true
+          description: The ID of the book.
+          schema:
+            type: string
+        - name: critiqueId
+          in: path
+          required: true
+          description: The ID of the critique to be deleted.
+          schema:
+            type: string
+      responses:
+        204:
+          description: Critique successfully deleted.
+        404:
+          description: Critique not found.
+
+  /genres:
+    post:
+      summary: Create a genre.
+      tags:
+        - genres
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenreData'
+      responses:
+        201:
+          description: The genre was successfully created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Genre'
+    get:
+      summary: List all genres.
+      tags:
+        - genres
+      responses:
+        200:
+          description: A list of genres.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Genre'
+  /genres/{genreId}:
+    get:
+      summary: Get a genre by ID.
+      tags:
+        - genres
+      parameters:
+        - name: genreId
+          in: path
+          required: true
+          description: The ID of the genre.
+          schema:
+            type: string
+      responses:
+        200:
+          description: The genre details.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Genre'
+        404:
+          description: Genre not found.
+    put:
+      summary: Update a genre by ID.
+      tags:
+        - genres
+      parameters:
+        - name: genreId
+          in: path
+          required: true
+          description: The ID of the genre to update.
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenreData'
+      responses:
+        200:
+          description: Genre successfully updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Genre'
+        404:
+          description: Genre not found.
+    delete:
+      summary: Delete a genre by ID.
+      tags:
+        - genres
+      parameters:
+        - name: genreId
+          in: path
+          required: true
+          description: The ID of the genre to delete.
+          schema:
+            type: string
+      responses:
+        204:
+          description: Genre successfully deleted.
+        404:
+          description: Genre not found.
+  /authors:
+    post:
+      summary: Create an author.
+      tags:
+        - authors
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthorData'
+      responses:
+        201:
+          description: The author was successfully created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Author'
+    get:
+      summary: List all authors.
+      tags:
+        - authors
+      responses:
+        200:
+          description: A list of authors.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Author'
+  /authors/{authorId}:
+    get:
+      summary: Get an author by ID.
+      tags:
+        - authors
+      parameters:
+        - name: authorId
+          in: path
+          required: true
+          description: The ID of the author.
+          schema:
+            type: string
+      responses:
+        200:
+          description: The author details.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Author'
+        404:
+          description: Author not found.
+    put:
+      summary: Update an author by ID.
+      tags:
+        - authors
+      parameters:
+        - name: authorId
+          in: path
+          required: true
+          description: The ID of the author to update.
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthorData'
+      responses:
+        200:
+          description: Author successfully updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Author'
+        404:
+          description: Author not found.
+    delete:
+      summary: Delete an author by ID.
+      tags:
+        - authors
+      parameters:
+        - name: authorId
+          in: path
+          required: true
+          description: The ID of the author to delete.
+          schema:
+            type: string
+      responses:
+        204:
+          description: Author successfully deleted.
+        404:
+          description: Author not found.
+components:
+  parameters:
+    page:
+      name: page
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+      example: 1
+    pageSize:
+      name: pageSize
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+      example: 25
+
+  responses:
+    UserValidationError:
+      description: The user is invalid.
+      content:
+        application/json:
+          example:
+            message: User validation failed
+    BookValidationError:
+      description: The book is invalid.
+      content:
+        application/json:
+          example:
+            message: Book validation failed
+    GenreValidationError:
+      description: The genre is invalid.
+      content:
+        application/json:
+          example:
+            message: Genre validation failed
+    AuthorValidationError:
+      description: The author is invalid.
+      content:
+        application/json:
+          example:
+            message: Author validation failed
+
+  schemas:
+    Genre: # Fixed indentation for Genre schema
+      type: object
+      properties:
+        id:
+          type: string
+          description: The unique identifier of the genre.
+          example: 5fbd827a512e73129cfedb1c
+        name:
+          type: string
+          description: The name of the genre.
+          example: Fiction
+        createdAt:
+          type: string
+          format: date-time
+          description: The date the genre was created.
+          example: 2025-01-13T10:00:00.000Z
+      required:
+        - id
+        - name
+
+    GenreData:
+      type: object
+      properties:
+        name:
+          type: string
+          description: The name of the genre.
+          example: Fiction
+      required:
+        - name
+    Author:
+      type: object
+      properties:
+        id:
+          type: string
+          description: The unique identifier of the author.
+          example: 12345
+        name:
+          type: string
+          description: The name of the author.
+          example: John Doe
+        bio:
+          type: string
+          description: A brief biography of the author.
+          example: "An accomplished author."
+        birthDate:
+          type: string
+          format: date
+          description: The birth date of the author.
+          example: 1980-01-01
+        createdAt:
+          type: string
+          format: date-time
+          description: The date when the author was created.
+          example: 2025-01-13T10:00:00.000Z
+      required:
+        - id
+        - name
+    AuthorData:
+      type: object
+      properties:
+        name:
+          type: string
+          description: The name of the author.
+          example: John Doe
+        bio:
+          type: string
+          description: A brief biography of the author.
+          example: "An accomplished author."
+        birthDate:
+          type: string
+          format: date
+          description: The birth date of the author.
+          example: 1980-01-01
+      required:
+        - name
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          description: The unique identifier of the user.
+          example: 7fe91a9a41bc839033eedf0f
+        username:
+          type: string
+          description: The username of the user.
+          example: johndoe
+        email:
+          type: string
+          description: The email of the user.
+          example: johndoe@example.com
+      required:
+        - id
+        - username
+        - email
+    Favorite:
+      type: object
+      properties:
+        id:
+          type: string
+          description: The unique identifier of the favorite.
+          example: 123abc
+        userId:
+          type: string
+          description: The ID of the user who favorited the book.
+          example: 7fe91a9a41bc839033eedf0f
+        bookId:
+          type: string
+          description: The ID of the favorited book.
+          example: 123bookid
+      required:
+        - id
+        - userId
+        - bookId
+    Wishlist:
+      type: object
+      properties:
+        id:
+          type: string
+          description: The unique identifier of the wishlist item.
+          example: 456wishlistid
+        userId:
+          type: string
+          description: The ID of the user who added the book to the wishlist.
+          example: 7fe91a9a41bc839033eedf0f
+        bookId:
+          type: string
+          description: The ID of the wishlisted book.
+          example: 789bookid
+      required:
+        - id
+        - userId
+        - bookId
+    Book: # Corrected indentation starts here
+      type: object
+      properties:
+        id:
+          type: string
+          description: The unique identifier of the book.
+          example: 123bookid
+        title:
+          type: string
+          description: The title of the book.
+          example: Great Expectations
+        authorId:
+          type: string
+          description: The ID of the author of the book.
+          example: 7a9bc839033eedf0f
+        genres:
+          type: array
+          description: Genres associated with the book.
+          items:
+            $ref: '#/components/schemas/Genre'
+        publicationDate:
+          type: string
+          format: date
+          description: The publication date of the book.
+          example: 2023-01-01
+      required:
+        - id
+        - title
+        - authorId
+    BookData:
+      type: object
+      properties:
+        title:
+          type: string
+          description: The title of the book.
+          example: Great Expectations
+        authorId:
+          type: string
+          description: The ID of the author of the book.
+          example: 7a9bc839033eedf0f
+        genres:
+          type: array
+          description: Genres to associate with the book.
+          items:
+            $ref: '#/components/schemas/Genre'
+        publicationDate:
+          type: string
+          format: date
+          description: The publication date of the book.
+          example: 2023-01-01
+      required:
+        - title
+        - authorId
+    Critique:
+      type: object
+      properties:
+        id:
+          type: string
+          description: The unique identifier of the critique.
+          example: 456critiqueid
+        bookId:
+          type: string
+          description: The ID of the critiqued book.
+          example: 123bookid
+        userId:
+          type: string
+          description: The ID of the user who wrote the critique.
+          example: 7fe91a9a41bc839033eedf0f
+        rating:
+          type:
+            type: number
+            description: The rating given to the book.
+            example: 4.5

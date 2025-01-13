@@ -1,0 +1,1 @@
+This API allows you to manage Users, Books, Authors, Genres, and various relationships between them

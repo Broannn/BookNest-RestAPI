@@ -1,15 +1,15 @@
 {
   "name": "booknest-restapi",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "project on a course of the heig-vd in archioweb",
   "main": "app.js",
   "type": "module",
   "scripts": {
-    "apidoc": "apidoc -i routes -o docs",
-    "apidoc:watch": "onchange APIDOC.md routes/**/*.js -- npm run apidoc",
+    "apidoc": "apidoc -i src/routes -o docs",
+    "apidoc:watch": "onchange APIDOC.md src/routes/**/*.js -- npm run apidoc",
     "start": "node ./bin/www.js",
     "dev": "nodemon ./app.js",
-    "test": "cross-env NODE_ENV=test NODE_OPTIONS=--experimental-vm-modules jest",
+    "test": "cross-env NODE_ENV=test NODE_OPTIONS=--experimental-vm-modules jest --runInBand",
     "nodemon": "DEBUG=demo:* AUTH_TOKEN=secret nodemon",
     "format": "prettier --config ./.prettierrc.yml --check .",
     "format:write": "prettier --config ./.prettierrc.yml --write ."
@@ -18,19 +18,22 @@
   "author": "nathan stader, maxime peretti, leo winterhalter",
   "license": "ISC",
   "dependencies": {
-    "apidoc": "^1.2.0",
+    "axios": "^1.7.9",
     "bcrypt": "^5.1.1",
     "express": "^4.21.1",
     "format-link-header": "^3.1.1",
+    "js-yaml": "^4.1.0",
     "jsonwebtoken": "^9.0.2",
     "lodash": "^4.17.21",
     "mongodb": "^6.10.0",
     "morgan": "^1.10.0",
-    "pug": "^3.0.3"
+    "pug": "^3.0.3",
+    "swagger-ui-express": "^5.0.1"
   },
   "devDependencies": {
     "@babel/core": "^7.26.0",
     "@babel/preset-env": "^7.26.0",
+    "apidoc": "^1.2.0",
     "babel-jest": "^29.7.0",
     "cross-env": "^7.0.3",
     "dotenv": "^16.4.7",

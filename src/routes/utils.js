@@ -3,32 +3,32 @@ import formatLinkHeader from 'format-link-header';
 import { authToken, baseUrl } from '../../config.js';
 
 /**
- * Responds with 415 Unsupported Media Type if the request does not have the Content-Type application/json.
+ * Répond avec 415 Unsupported Media Type si la requête n'a pas le Content-Type application/json.
  */
 export function requireJson(req, res, next) {
   if (req.is('application/json')) {
     return next();
   }
 
-  const error = new Error('This resource only has an application/json representation');
+  const error = new Error('Cette ressource n\'a qu\'une représentation application/json');
   error.status = 415; // 415 Unsupported Media Type
   next(error);
 }
 
 /**
- * Parses the pagination parameters (i.e. page & page size) from the request.
+ * Analyse les paramètres de pagination (c'est-à-dire page et taille de page) à partir de la requête.
  *
- * @param {ExpressRequest} req - The Express request object
- * @returns An object with "page" and "pageSize" properties
+ * @param {ExpressRequest} req - L'objet de requête Express
+ * @returns Un objet contenant les propriétés "page" et "pageSize"
  */
 export function getPaginationParameters(req) {
-  // Parse the "page" URL query parameter indicating the index of the first element that should be in the response
+  // Analyse le paramètre "page" de l'URL indiquant l'index du premier élément dans la réponse
   let page = parseInt(req.query.page, 10);
   if (isNaN(page) || page < 1) {
     page = 1;
   }
 
-  // Parse the "pageSize" URL query parameter indicating how many elements should be in the response
+  // Analyse le paramètre "pageSize" de l'URL indiquant combien d'éléments doivent être inclus dans la réponse
   let pageSize = parseInt(req.query.pageSize, 10);
   if (isNaN(pageSize) || pageSize < 0 || pageSize > 100) {
     pageSize = 100;
@@ -38,86 +38,88 @@ export function getPaginationParameters(req) {
 }
 
 /**
- * Adds a Link header to the response (if applicable).
+ * Ajoute un en-tête Link à la réponse (si applicable).
  *
- * @param {String} resourceHref - The hyperlink reference of the collection (e.g. "/api/people")
- * @param {Number} page - The page being listed
- * @param {Number} pageSize - The page size
- * @param {Number} total - The total number of elements
- * @param {ExpressResponse} res - The Exprss response object
+ * @param {String} resourceHref - Le lien hypertexte de la collection (ex. "/api/people")
+ * @param {Number} page - La page en cours d'affichage
+ * @param {Number} pageSize - La taille de la page
+ * @param {Number} total - Le nombre total d'éléments
+ * @param {ExpressResponse} res - L'objet de réponse Express
  */
 export function addLinkHeader(resourceHref, page, pageSize, total, res) {
   const links = {};
   const url = baseUrl + resourceHref;
   const maxPage = Math.ceil(total / pageSize);
 
-  // Add first & prev links if current page is not the first one
+  // Ajoute les liens "first" et "prev" si la page actuelle n'est pas la première
   if (page > 1) {
     links.first = { rel: 'first', url: `${url}?page=1&pageSize=${pageSize}` };
     links.prev = { rel: 'prev', url: `${url}?page=${page - 1}&pageSize=${pageSize}` };
   }
 
-  // Add next & last links if current page is not the last one
+  // Ajoute les liens "next" et "last" si la page actuelle n'est pas la dernière
   if (page < maxPage) {
     links.next = { rel: 'next', url: `${url}?page=${page + 1}&pageSize=${pageSize}` };
     links.last = { rel: 'last', url: `${url}?page=${maxPage}&pageSize=${pageSize}` };
   }
 
-  // If there are any links (i.e. if there is more than one page),
-  // add the Link header to the response
+  // Si des liens existent (c'est-à-dire s'il y a plus d'une page),
+  // ajoute l'en-tête Link à la réponse
   if (Object.keys(links).length >= 1) {
     res.set('Link', formatLinkHeader(links));
   }
 }
 
 /**
- * Returns true if the specified property is among the "include" URL query parameters sent by the client
+ * Retourne true si la propriété spécifiée est incluse dans les paramètres URL "include" envoyés par le client.
  */
 export function responseShouldInclude(req, property) {
-  // Get the "include" URL query parameter
+  // Récupère le paramètre URL "include"
   let propertiesToInclude = req.query.include;
   if (!propertiesToInclude) {
     return false;
   }
 
-  // If it's not an array, wrap it into an array
+  // Si ce n'est pas un tableau, l'envelopper dans un tableau
   if (!Array.isArray(propertiesToInclude)) {
     propertiesToInclude = [propertiesToInclude];
   }
 
-  // Check whether the property is inside the array
+  // Vérifie si la propriété est dans le tableau
   return propertiesToInclude.indexOf(property) >= 0;
 }
 
 /**
- * Middleware that responds with 401 Unauthorized if the client did not sent a bearer authentication token
- * equal to the $AUTH_TOKEN environment variable.
+ * Middleware qui répond avec 401 Unauthorized si le client n'a pas envoyé un jeton d'authentification bearer
+ * égal à la variable d'environnement $AUTH_TOKEN.
  */
 export function authenticate(req, res, next) {
-  if (!authToken) {
-    return res.sendStatus(401);
-  }
-
   const authorizationHeader = req.get('Authorization');
+
   if (!authorizationHeader) {
-    return res.sendStatus(401);
+    return res.status(401).json({ error: 'Le jeton d’authentification est manquant' });
   }
 
   const match = authorizationHeader.match(/^Bearer +(.+)$/);
   if (!match) {
-    return res.sendStatus(401);
+    return res.status(401).json({ error: 'Format d’authentification invalide' });
   }
 
-  if (match[1] !== authToken) {
-    return res.sendStatus(401);
-  }
+  const token = match[1];
 
-  next();
+  try {
+    // Remplacez 'your_jwt_secret' par votre clé secrète utilisée pour signer les jetons
+    const decoded = jwt.verify(token, 'your_jwt_secret');
+    req.currentUserId = decoded.id; // Ajoute l'ID utilisateur décodé à la requête
+    next();
+  } catch (err) {
+    return res.status(401).json({ error: 'Jeton invalide ou expiré' });
+  }
 }
 
 /**
  * @apiDefine Pagination
- * @apiParam (URL query parameters) {Number{1..}} [page] The page to retrieve (defaults to 1)
- * @apiParam (URL query parameters) {Number{1..100}} [pageSize] The number of elements to retrieve in one page (defaults to 100)
- * @apiSuccess (Response headers) {String} Link Links to the first, previous, next and last pages of the collection (if applicable)
+ * @apiParam (Paramètres de requête URL) {Number{1..}} [page] La page à récupérer (par défaut 1)
+ * @apiParam (Paramètres de requête URL) {Number{1..100}} [pageSize] Le nombre d'éléments à récupérer par page (par défaut 100)
+ * @apiSuccess (En-têtes de réponse) {String} Link Liens vers les pages première, précédente, suivante et dernière de la collection (si applicable)
  */

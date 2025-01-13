@@ -37,12 +37,31 @@ import {
 const debug = debugLib("app:books");
 const router = express.Router();
 
-// CREATE (POST)
+/**
+ * @api {post} /api/books Créer un livre
+ * @apiName CreateBook
+ * @apiGroup Livre
+ * @apiVersion 1.0.0
+ * @apiDescription Ajoute un nouveau livre dans le système.
+ *
+ * @apiBody {String} title Titre du livre
+ * @apiBody {String} [author_id] ID de l'auteur du livre
+ * @apiBody {Array} [genres] Liste des genres associés au livre
+ * @apiSuccess {Object} book Le livre créé
+ * @apiSuccessExample {json} 201 Créé
+ *     HTTP/1.1 201 Créé
+ *     {
+ *       "id": "12345",
+ *       "title": "Mon Livre",
+ *       "author_id": "67890",
+ *       "genres": ["fantasy", "adventure"]
+ *     }
+ */
 router.post("/", utils.requireJson, (req, res, next) => {
   new Book(req.body)
     .save()
     .then((createdBook) => {
-      debug(`Created book "${createdBook.title}"`);
+      debug(`Livre créé "${createdBook.title}"`);
       return createdBook;
     })
     .then((createdBook) => {
@@ -60,116 +79,175 @@ router.post("/", utils.requireJson, (req, res, next) => {
     .catch(next);
 });
 
-// READ ALL (GET) avec pagination
+/**
+ * @api {get} /api/books Récupérer tous les livres
+ * @apiName GetBooks
+ * @apiGroup Livre
+ * @apiVersion 1.0.0
+ * @apiDescription Récupère une liste paginée de tous les livres.
+ *
+ * @apiQuery {Number} [page=1] Numéro de la page pour la pagination
+ * @apiQuery {Number} [limit=10] Nombre d'éléments par page
+ * @apiSuccess {Object[]} books Liste des livres
+ * @apiSuccessExample {json} 200 OK
+ *     HTTP/1.1 200 OK
+ *     {
+ *       "books": [
+ *         {
+ *           "id": "12345",
+ *           "title": "Mon Livre",
+ *           "author_id": "67890",
+ *           "genres": ["fantasy", "adventure"]
+ *         }
+ *       ],
+ *       "meta": {
+ *         "total": 100,
+ *         "page": 1,
+ *         "pages": 10,
+ *         "limit": 10
+ *       }
+ *     }
+ */
 router.get("/", (req, res, next) => {
-  const page = parseInt(req.query.page, 10) || 1; // Page courante
-  const limit = parseInt(req.query.limit, 10) || 10; // Nombre d'éléments par page
+  const page = parseInt(req.query.page, 10) || 1;
+  const limit = parseInt(req.query.limit, 10) || 10;
   const skip = (page - 1) * limit;
 
   Book.find()
-    .populate("author_id genres") // Inclut les relations
+    .populate("author_id genres")
     .skip(skip)
     .limit(limit)
-    .then((books) => {
-      return Book.countDocuments().then((total) => ({
-        books,
-        total,
-        page,
-        pages: Math.ceil(total / limit),
-      }));
+    .then(async (books) => {
+      const total = await Book.countDocuments();
+      return { books, total, page, pages: Math.ceil(total / limit) };
     })
-    .then(({
-      books,
-      total,
-      page,
-      pages
-    }) => {
+    .then(({ books, total, page, pages }) => {
       res.status(200).send({
         books,
-        meta: {
-          total,
-          page,
-          pages,
-          limit,
-        },
+        meta: { total, page, pages, limit },
       });
     })
     .catch(next);
 });
 
-// READ ONE (GET by ID)
+/**
+ * @api {get} /api/books/:id Récupérer un livre par ID
+ * @apiName GetBookById
+ * @apiGroup Livre
+ * @apiVersion 1.0.0
+ * @apiDescription Récupère les détails d'un livre spécifique par son ID.
+ *
+ * @apiParam {String} id Identifiant unique du livre
+ * @apiSuccess {Object} book Détails du livre
+ * @apiSuccessExample {json} 200 OK
+ *     HTTP/1.1 200 OK
+ *     {
+ *       "id": "12345",
+ *       "title": "Mon Livre",
+ *       "author_id": "67890",
+ *       "genres": ["fantasy", "adventure"]
+ *     }
+ * @apiError 404 Livre non trouvé
+ */
 router.get("/:id", (req, res, next) => {
   Book.findById(req.params.id)
-    .populate("author_id genres") // Inclut les relations
+    .populate("author_id genres")
     .then((book) => {
       if (!book) {
-        return res.status(404).send({
-          error: "Book not found",
-        });
+        return res.status(404).send({ error: "Livre non trouvé" });
       }
       res.status(200).send(book);
     })
     .catch(next);
 });
 
-// UPDATE (PUT)
+/**
+ * @api {put} /api/books/:id Mettre à jour un livre
+ * @apiName UpdateBook
+ * @apiGroup Livre
+ * @apiVersion 1.0.0
+ * @apiDescription Met à jour les informations d'un livre existant.
+ *
+ * @apiParam {String} id Identifiant unique du livre
+ * @apiBody {String} [title] Nouveau titre du livre
+ * @apiBody {String} [author_id] Nouvel ID de l'auteur
+ * @apiBody {Array} [genres] Nouvelle liste de genres
+ * @apiSuccess {Object} book Livre mis à jour
+ * @apiSuccessExample {json} 200 OK
+ *     HTTP/1.1 200 OK
+ *     {
+ *       "id": "12345",
+ *       "title": "Nouveau Titre",
+ *       "author_id": "67890",
+ *       "genres": ["romance", "drama"]
+ *     }
+ * @apiError 404 Livre non trouvé
+ */
 router.put(
   '/:id',
-  authenticate, // Vérifie que l'utilisateur est authentifié
-  authorizeOwner('Book'), // Vérifie que l'utilisateur est propriétaire du livre
-  utils.requireJson, // Vérifie que la requête est en JSON
+  utils.requireJson,
   (req, res, next) => {
     Book.findByIdAndUpdate(req.params.id, req.body, {
-        new: true,
-        runValidators: true, // Applique les validations Mongoose
-      })
+      new: true,
+      runValidators: true
+    })
       .then((updatedBook) => {
         if (!updatedBook) {
-          return res.status(404).send({
-            error: 'Book not found'
-          });
+          return res.status(404).send({ error: "Livre non trouvé" });
         }
-        return updatedBook.populate('author_id genres').execPopulate();
-      })
-      .then((updatedBook) => {
         res.status(200).send(updatedBook);
       })
       .catch(next);
   }
 );
 
-// DELETE (DELETE)
-router.delete(
-  '/:id',
-  authenticate, // Vérifie que l'utilisateur est authentifié
-  authorizeOwner('Book'), // Vérifie que l'utilisateur est propriétaire du livre
-  (req, res, next) => {
-    Book.findByIdAndDelete(req.params.id)
-      .then((deletedBook) => {
-        if (!deletedBook) {
-          return res.status(404).send({
-            error: 'Book not found'
-          });
-        }
-        res.status(204).send(); // No content
-      })
-      .catch(next);
-  }
-);
-
+/**
+ * @api {delete} /api/books/:id Supprimer un livre
+ * @apiName DeleteBook
+ * @apiGroup Livre
+ * @apiVersion 1.0.0
+ * @apiDescription Supprime un livre par son ID.
+ *
+ * @apiParam {String} id Identifiant unique du livre
+ * @apiSuccessExample {json} 204 Aucun contenu
+ *     HTTP/1.1 204 Aucun contenu
+ * @apiError 404 Livre non trouvé
+ */
+router.delete('/:id', (req, res, next) => {
+  Book.findByIdAndDelete(req.params.id)
+    .then((deletedBook) => {
+      if (!deletedBook) {
+        return res.status(404).send({ error: "Livre non trouvé" });
+      }
+      res.status(204).send();
+    })
+    .catch(next);
+});
 
 
 
 // Genre du livre
-
-// Ajouter un genre à un livre
+/**
+ * @api {post} /api/books/:bookId/genres Ajouter un genre à un livre
+ * @apiName AddGenreToBook
+ * @apiGroup Livre
+ * @apiVersion 1.0.0
+ * @apiDescription Ajoute un genre à un livre spécifique.
+ *
+ * @apiParam {String} bookId ID du livre
+ * @apiBody {String} genreId ID du genre
+ * @apiSuccess {Object} bookGenre Relation entre le livre et le genre
+ * @apiSuccessExample {json} 201 Créé
+ *     HTTP/1.1 201 Créé
+ *     {
+ *       "bookId": "12345",
+ *       "genreId": "67890",
+ *       "createdAt": "2025-01-13T10:00:00.000Z"
+ *     }
+ */
 router.post("/:bookId/genres", async (req, res, next) => {
-  const {
-    bookId
-  } = req.params;
-  const {
-    genreId
-  } = req.body;
+  const { bookId } = req.params;
+  const { genreId } = req.body;
 
   try {
     const bookGenre = await addGenreToBook(bookId, genreId);
@@ -179,11 +257,30 @@ router.post("/:bookId/genres", async (req, res, next) => {
   }
 });
 
-// Récupérer les genres d'un livre
+/**
+ * @api {get} /api/books/:bookId/genres Récupérer les genres d'un livre
+ * @apiName GetGenresByBook
+ * @apiGroup Livre
+ * @apiVersion 1.0.0
+ * @apiDescription Récupère la liste des genres associés à un livre spécifique.
+ *
+ * @apiParam {String} bookId ID du livre
+ * @apiSuccess {Object[]} genres Liste des genres associés
+ * @apiSuccessExample {json} 200 OK
+ *     HTTP/1.1 200 OK
+ *     [
+ *       {
+ *         "id": "67890",
+ *         "name": "Fantasy"
+ *       },
+ *       {
+ *         "id": "12345",
+ *         "name": "Adventure"
+ *       }
+ *     ]
+ */
 router.get("/:bookId/genres", async (req, res, next) => {
-  const {
-    bookId
-  } = req.params;
+  const { bookId } = req.params;
 
   try {
     const genres = await getGenresByBook(bookId);
@@ -193,12 +290,21 @@ router.get("/:bookId/genres", async (req, res, next) => {
   }
 });
 
-// Supprimer un genre d'un livre
+/**
+ * @api {delete} /api/books/:bookId/genres/:genreId Supprimer un genre d'un livre
+ * @apiName RemoveGenreFromBook
+ * @apiGroup Livre
+ * @apiVersion 1.0.0
+ * @apiDescription Supprime un genre associé à un livre spécifique.
+ *
+ * @apiParam {String} bookId ID du livre
+ * @apiParam {String} genreId ID du genre
+ * @apiSuccessExample {json} 204 Aucun contenu
+ *     HTTP/1.1 204 Aucun contenu
+ * @apiError 404 Relation livre-genre non trouvée
+ */
 router.delete("/:bookId/genres/:genreId", async (req, res, next) => {
-  const {
-    bookId,
-    genreId
-  } = req.params;
+  const { bookId, genreId } = req.params;
 
   try {
     const result = await BookGenre.removeGenreFromBook({
@@ -207,88 +313,101 @@ router.delete("/:bookId/genres/:genreId", async (req, res, next) => {
     });
     if (!result) {
       return res.status(404).send({
-        message: "Book-Genre relationship not found",
+        message: "Relation livre-genre non trouvée",
       });
     }
-    res.status(204).send(); // No content
+    res.status(204).send();
   } catch (err) {
     next(err);
   }
 });
 
-router.get('/', (req, res, next) => {
-  const {
-    genre,
-    page = 1,
-    limit = 10
-  } = req.query; // Paramètres de requête
-  const skip = (page - 1) * limit; // Calcul de l'offset
+// router.get('/', (req, res, next) => {
+//   const {
+//     genre,
+//     page = 1,
+//     limit = 10
+//   } = req.query; // Paramètres de requête
+//   const skip = (page - 1) * limit; // Calcul de l'offset
 
-  const genreFilter = genre ?
-    BookGenre.findOne({
-      name: genre
-    }).then((foundGenre) => {
-      if (!foundGenre) {
-        return Promise.reject(new Error('Genre not found'));
-      }
-      return {
-        genre_id: foundGenre._id
-      };
-    }) :
-    Promise.resolve({}); // Pas de filtre si `genre` n'est pas fourni
+//   const genreFilter = genre ?
+//     BookGenre.findOne({
+//       name: genre
+//     }).then((foundGenre) => {
+//       if (!foundGenre) {
+//         return Promise.reject(new Error('Genre not found'));
+//       }
+//       return {
+//         genre_id: foundGenre._id
+//       };
+//     }) :
+//     Promise.resolve({}); // Pas de filtre si `genre` n'est pas fourni
 
-  genreFilter
-    .then((filter) =>
-      BookGenre.find(filter)
-      .populate('author_id genres') // Inclut les relations
-      .skip(skip)
-      .limit(Number(limit))
-    )
-    .then((books) =>
-      BookGenre.countDocuments().then((total) => ({
-        books,
-        total,
-        page: Number(page),
-        pages: Math.ceil(total / limit),
-      }))
-    )
-    .then(({
-      books,
-      total,
-      page,
-      pages
-    }) => {
-      res.status(200).send({
-        books,
-        meta: {
-          total,
-          page,
-          pages,
-          limit: Number(limit),
-        },
-      });
-    })
-    .catch((err) => {
-      if (err.message === 'Genre not found') {
-        return res.status(404).send({
-          error: err.message
-        });
-      }
-      next(err); // Passer au middleware d'erreur
-    });
-});
+//   genreFilter
+//     .then((filter) =>
+//       BookGenre.find(filter)
+//       .populate('author_id genres') // Inclut les relations
+//       .skip(skip)
+//       .limit(Number(limit))
+//     )
+//     .then((books) =>
+//       BookGenre.countDocuments().then((total) => ({
+//         books,
+//         total,
+//         page: Number(page),
+//         pages: Math.ceil(total / limit),
+//       }))
+//     )
+//     .then(({
+//       books,
+//       total,
+//       page,
+//       pages
+//     }) => {
+//       res.status(200).send({
+//         books,
+//         meta: {
+//           total,
+//           page,
+//           pages,
+//           limit: Number(limit),
+//         },
+//       });
+//     })
+//     .catch((err) => {
+//       if (err.message === 'Genre not found') {
+//         return res.status(404).send({
+//           error: err.message
+//         });
+//       }
+//       next(err); // Passer au middleware d'erreur
+//     });
+// });
 
 
 
 
 // Livre du jour
 
-// Ajouter un livre du jour
-router.post("/", async (req, res, next) => {
-  const {
-    bookId,
-    date
-  } = req.body;
+/**
+ * @api {post} /api/books/bod Ajouter un livre du jour
+ * @apiName AddBookOfDay
+ * @apiGroup LivreDuJour
+ * @apiVersion 1.0.0
+ * @apiDescription Ajoute un livre comme "Livre du Jour" pour une date donnée.
+ *
+ * @apiBody {String} bookId ID du livre
+ * @apiBody {String} date Date pour laquelle le livre est sélectionné comme "Livre du Jour"
+ * @apiSuccess {Object} bookOfDay Détails du livre du jour
+ * @apiSuccessExample {json} 201 Créé
+ *     HTTP/1.1 201 Créé
+ *     {
+ *       "bookId": "12345",
+ *       "date": "2025-01-13"
+ *     }
+ */
+router.post("/bod", async (req, res, next) => {
+  const { bookId, date } = req.body;
 
   try {
     const bookOfDay = await addBookOfDay(bookId, date);
@@ -298,8 +417,24 @@ router.post("/", async (req, res, next) => {
   }
 });
 
-// Récupérer les livres du jour
-router.get("/", async (req, res, next) => {
+/**
+ * @api {get} /api/books/bod Récupérer les livres du jour
+ * @apiName GetBooksOfDay
+ * @apiGroup LivreDuJour
+ * @apiVersion 1.0.0
+ * @apiDescription Récupère une liste de tous les livres marqués comme "Livre du Jour".
+ *
+ * @apiSuccess {Object[]} booksOfDay Liste des livres du jour
+ * @apiSuccessExample {json} 200 OK
+ *     HTTP/1.1 200 OK
+ *     [
+ *       {
+ *         "bookId": "12345",
+ *         "date": "2025-01-13"
+ *       }
+ *     ]
+ */
+router.get("/bod", async (req, res, next) => {
   try {
     const booksOfDay = await getBooksOfDay();
     res.status(200).send(booksOfDay);
@@ -308,33 +443,57 @@ router.get("/", async (req, res, next) => {
   }
 });
 
-// Ajouter une discussion à un livre du jour
-router.post("/:bookOfDayId/discussions", async (req, res, next) => {
-  const {
-    bookOfDayId
-  } = req.params;
-  const {
-    userId,
-    content
-  } = req.body;
+/**
+ * @api {post} /api/books/bod/:bookOfDayId/discussions Ajouter une discussion à un livre du jour
+ * @apiName AddDiscussionToBookOfDay
+ * @apiGroup LivreDuJour
+ * @apiVersion 1.0.0
+ * @apiDescription Ajoute une discussion à un "Livre du Jour" spécifique.
+ *
+ * @apiParam {String} bookOfDayId ID du livre du jour
+ * @apiBody {String} userId ID de l'utilisateur
+ * @apiBody {String} content Contenu de la discussion
+ * @apiSuccess {Object} discussion Détails de la discussion ajoutée
+ * @apiSuccessExample {json} 201 Créé
+ *     HTTP/1.1 201 Créé
+ *     {
+ *       "bookOfDayId": "67890",
+ *       "userId": "12345",
+ *       "content": "Ceci est une discussion."
+ *     }
+ */
+router.post("/bod/:bookOfDayId/discussions", async (req, res, next) => {
+  const { bookOfDayId } = req.params;
+  const { userId, content } = req.body;
 
   try {
-    const discussion = await addDiscussionToBookOfDay(
-      bookOfDayId,
-      userId,
-      content
-    );
+    const discussion = await addDiscussionToBookOfDay(bookOfDayId, userId, content);
     res.status(201).send(discussion);
   } catch (err) {
     next(err);
   }
 });
 
-// Récupérer les discussions d'un livre du jour
-router.get("/:bookOfDayId/discussions", async (req, res, next) => {
-  const {
-    bookOfDayId
-  } = req.params;
+/**
+ * @api {get} /api/books/bod/:bookOfDayId/discussions Récupérer les discussions d'un livre du jour
+ * @apiName GetDiscussionsByBookOfDay
+ * @apiGroup LivreDuJour
+ * @apiVersion 1.0.0
+ * @apiDescription Récupère les discussions associées à un "Livre du Jour" spécifique.
+ *
+ * @apiParam {String} bookOfDayId ID du livre du jour
+ * @apiSuccess {Object[]} discussions Liste des discussions
+ * @apiSuccessExample {json} 200 OK
+ *     HTTP/1.1 200 OK
+ *     [
+ *       {
+ *         "userId": "12345",
+ *         "content": "Ceci est une discussion."
+ *       }
+ *     ]
+ */
+router.get("/bod/:bookOfDayId/discussions", async (req, res, next) => {
+  const { bookOfDayId } = req.params;
 
   try {
     const discussions = await getDiscussionsByBookOfDay(bookOfDayId);
@@ -345,14 +504,29 @@ router.get("/:bookOfDayId/discussions", async (req, res, next) => {
 });
 
 
-
 // Critique
 
-// Route : Récupérer toutes les critiques pour un livre
+/**
+ * @api {get} /api/books/:bookId/critiques Récupérer toutes les critiques pour un livre
+ * @apiName GetCritiquesByBook
+ * @apiGroup Critique
+ * @apiVersion 1.0.0
+ * @apiDescription Récupère toutes les critiques associées à un livre spécifique.
+ *
+ * @apiParam {String} bookId ID du livre
+ * @apiSuccess {Object[]} critiques Liste des critiques
+ * @apiSuccessExample {json} 200 OK
+ *     HTTP/1.1 200 OK
+ *     [
+ *       {
+ *         "userId": "12345",
+ *         "rating": 4,
+ *         "comment": "Très bon livre."
+ *       }
+ *     ]
+ */
 router.get('/:bookId/critiques', async (req, res, next) => {
-  const {
-    bookId
-  } = req.params;
+  const { bookId } = req.params;
 
   try {
     const critiques = await getCritiquesByBook(bookId);
@@ -362,16 +536,29 @@ router.get('/:bookId/critiques', async (req, res, next) => {
   }
 });
 
-// Route : Ajouter une critique pour un livre
+/**
+ * @api {post} /api/books/:bookId/critiques Ajouter une critique pour un livre
+ * @apiName AddCritique
+ * @apiGroup Critique
+ * @apiVersion 1.0.0
+ * @apiDescription Ajoute une critique pour un livre spécifique.
+ *
+ * @apiParam {String} bookId ID du livre
+ * @apiBody {String} userId ID de l'utilisateur
+ * @apiBody {Number} rating Note attribuée au livre
+ * @apiBody {String} comment Commentaire sur le livre
+ * @apiSuccess {Object} critique Critique ajoutée
+ * @apiSuccessExample {json} 201 Créé
+ *     HTTP/1.1 201 Créé
+ *     {
+ *       "userId": "12345",
+ *       "rating": 4,
+ *       "comment": "Excellent livre."
+ *     }
+ */
 router.post('/:bookId/critiques', async (req, res, next) => {
-  const {
-    userId,
-    rating,
-    comment
-  } = req.body;
-  const {
-    bookId
-  } = req.params;
+  const { userId, rating, comment } = req.body;
+  const { bookId } = req.params;
 
   try {
     const critique = await addCritique(userId, bookId, rating, comment);
@@ -381,12 +568,27 @@ router.post('/:bookId/critiques', async (req, res, next) => {
   }
 });
 
-// Route : Récupérer la critique d'un utilisateur pour un livre
+/**
+ * @api {get} /api/books/:bookId/critiques/user/:userId Récupérer une critique utilisateur pour un livre
+ * @apiName GetCritiqueByUserAndBook
+ * @apiGroup Critique
+ * @apiVersion 1.0.0
+ * @apiDescription Récupère la critique d'un utilisateur spécifique pour un livre donné.
+ *
+ * @apiParam {String} bookId ID du livre
+ * @apiParam {String} userId ID de l'utilisateur
+ * @apiSuccess {Object} critique Détails de la critique
+ * @apiSuccessExample {json} 200 OK
+ *     HTTP/1.1 200 OK
+ *     {
+ *       "userId": "12345",
+ *       "rating": 5,
+ *       "comment": "Un chef-d'œuvre."
+ *     }
+ * @apiError 404 Critique introuvable
+ */
 router.get('/:bookId/critiques/user/:userId', async (req, res, next) => {
-  const {
-    bookId,
-    userId
-  } = req.params;
+  const { bookId, userId } = req.params;
 
   try {
     const critique = await getCritiqueByUserAndBook(userId, bookId);
@@ -394,7 +596,7 @@ router.get('/:bookId/critiques/user/:userId', async (req, res, next) => {
       res.status(200).send(critique);
     } else {
       res.status(404).send({
-        message: 'Critique not found'
+        message: 'Critique introuvable'
       });
     }
   } catch (err) {
@@ -402,15 +604,27 @@ router.get('/:bookId/critiques/user/:userId', async (req, res, next) => {
   }
 });
 
-// Route : Mettre à jour une critique pour un livre
+/**
+ * @api {put} /api/books/critiques/:critiqueId Mettre à jour une critique pour un livre
+ * @apiName UpdateCritique
+ * @apiGroup Critique
+ * @apiVersion 1.0.0
+ * @apiDescription Met à jour les détails d'une critique existante.
+ *
+ * @apiParam {String} critiqueId ID de la critique
+ * @apiBody {Number} [rating] Nouvelle note attribuée au livre
+ * @apiBody {String} [comment] Nouveau commentaire
+ * @apiSuccess {Object} critique Critique mise à jour
+ * @apiSuccessExample {json} 200 OK
+ *     HTTP/1.1 200 OK
+ *     {
+ *       "rating": 5,
+ *       "comment": "Amélioration du commentaire."
+ *     }
+ */
 router.put('/critiques/:critiqueId', async (req, res, next) => {
-  const {
-    critiqueId
-  } = req.params;
-  const {
-    rating,
-    comment
-  } = req.body;
+  const { critiqueId } = req.params;
+  const { rating, comment } = req.body;
 
   try {
     const updatedCritique = await updateCritique(critiqueId, rating, comment);
@@ -420,15 +634,23 @@ router.put('/critiques/:critiqueId', async (req, res, next) => {
   }
 });
 
-// Route : Supprimer une critique pour un livre
+/**
+ * @api {delete} /api/books/critiques/:critiqueId Supprimer une critique pour un livre
+ * @apiName DeleteCritique
+ * @apiGroup Critique
+ * @apiVersion 1.0.0
+ * @apiDescription Supprime une critique existante pour un livre donné.
+ *
+ * @apiParam {String} critiqueId ID de la critique
+ * @apiSuccessExample {json} 204 Aucun contenu
+ *     HTTP/1.1 204 Aucun contenu
+ */
 router.delete('/critiques/:critiqueId', async (req, res, next) => {
-  const {
-    critiqueId
-  } = req.params;
+  const { critiqueId } = req.params;
 
   try {
     await deleteCritique(critiqueId);
-    res.status(204).send(); // 204 No Content
+    res.status(204).send();
   } catch (err) {
     next(err);
   }
@@ -439,12 +661,25 @@ router.delete('/critiques/:critiqueId', async (req, res, next) => {
 
 // Livres du Jour
 
-// Ajouter un livre du jour
+/**
+ * @api {post} /api/books/livres-du-jour Ajouter un livre du jour
+ * @apiName AddBookOfDayFrench
+ * @apiGroup LivreDuJour
+ * @apiVersion 1.0.0
+ * @apiDescription Ajoute un livre comme "Livre du Jour" pour une date donnée.
+ *
+ * @apiBody {String} bookId ID du livre
+ * @apiBody {String} date Date pour laquelle le livre est sélectionné comme "Livre du Jour"
+ * @apiSuccess {Object} bookOfDay Détails du livre du jour
+ * @apiSuccessExample {json} 201 Créé
+ *     HTTP/1.1 201 Créé
+ *     {
+ *       "bookId": "12345",
+ *       "date": "2025-01-13"
+ *     }
+ */
 router.post("/livres-du-jour", async (req, res, next) => {
-  const {
-    bookId,
-    date
-  } = req.body;
+  const { bookId, date } = req.body;
 
   try {
     const bookOfDay = await addBookOfDay(bookId, date);
@@ -454,7 +689,23 @@ router.post("/livres-du-jour", async (req, res, next) => {
   }
 });
 
-// Récupérer tous les livres du jour
+/**
+ * @api {get} /api/books/livres-du-jour Récupérer tous les livres du jour
+ * @apiName GetAllBooksOfDayFrench
+ * @apiGroup LivreDuJour
+ * @apiVersion 1.0.0
+ * @apiDescription Récupère une liste de tous les livres marqués comme "Livre du Jour".
+ *
+ * @apiSuccess {Object[]} booksOfDay Liste des livres du jour
+ * @apiSuccessExample {json} 200 OK
+ *     HTTP/1.1 200 OK
+ *     [
+ *       {
+ *         "bookId": "12345",
+ *         "date": "2025-01-13"
+ *       }
+ *     ]
+ */
 router.get("/livres-du-jour", async (req, res, next) => {
   try {
     const booksOfDay = await getBooksOfDay();
@@ -464,15 +715,28 @@ router.get("/livres-du-jour", async (req, res, next) => {
   }
 });
 
-// Ajouter une discussion à un livre du jour
+/**
+ * @api {post} /api/books/livres-du-jour/:bookOfDayId/discussions Ajouter une discussion à un livre du jour
+ * @apiName AddDiscussionToBookOfDayFrench
+ * @apiGroup LivreDuJour
+ * @apiVersion 1.0.0
+ * @apiDescription Ajoute une discussion à un "Livre du Jour" spécifique.
+ *
+ * @apiParam {String} bookOfDayId ID du livre du jour
+ * @apiBody {String} userId ID de l'utilisateur
+ * @apiBody {String} content Contenu de la discussion
+ * @apiSuccess {Object} discussion Détails de la discussion ajoutée
+ * @apiSuccessExample {json} 201 Créé
+ *     HTTP/1.1 201 Créé
+ *     {
+ *       "bookOfDayId": "67890",
+ *       "userId": "12345",
+ *       "content": "Ceci est une discussion."
+ *     }
+ */
 router.post("/livres-du-jour/:bookOfDayId/discussions", async (req, res, next) => {
-  const {
-    bookOfDayId
-  } = req.params;
-  const {
-    userId,
-    content
-  } = req.body;
+  const { bookOfDayId } = req.params;
+  const { userId, content } = req.body;
 
   try {
     const discussion = await addDiscussionToBookOfDay(bookOfDayId, userId, content);
@@ -482,11 +746,26 @@ router.post("/livres-du-jour/:bookOfDayId/discussions", async (req, res, next) =
   }
 });
 
-// Récupérer les discussions d'un livre du jour
+/**
+ * @api {get} /api/books/livres-du-jour/:bookOfDayId/discussions Récupérer les discussions d'un livre du jour
+ * @apiName GetDiscussionsByBookOfDayFrench
+ * @apiGroup LivreDuJour
+ * @apiVersion 1.0.0
+ * @apiDescription Récupère les discussions associées à un "Livre du Jour" spécifique.
+ *
+ * @apiParam {String} bookOfDayId ID du livre du jour
+ * @apiSuccess {Object[]} discussions Liste des discussions
+ * @apiSuccessExample {json} 200 OK
+ *     HTTP/1.1 200 OK
+ *     [
+ *       {
+ *         "userId": "12345",
+ *         "content": "Ceci est une discussion."
+ *       }
+ *     ]
+ */
 router.get("/livres-du-jour/:bookOfDayId/discussions", async (req, res, next) => {
-  const {
-    bookOfDayId
-  } = req.params;
+  const { bookOfDayId } = req.params;
 
   try {
     const discussions = await getDiscussionsByBookOfDay(bookOfDayId);
@@ -495,8 +774,6 @@ router.get("/livres-du-jour/:bookOfDayId/discussions", async (req, res, next) =>
     next(err);
   }
 });
-
-
 
 
 

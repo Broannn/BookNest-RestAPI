@@ -4,6 +4,21 @@ import Book from '../models/bookModel.js';
  * Middleware pour vérifier si l'utilisateur est propriétaire de la ressource.
  * @param {String} modelName Nom du modèle MongoDB à vérifier (ex. "Book").
  */
+/**
+ * Middleware d'autorisation pour vérifier si l'utilisateur connecté est le propriétaire de la ressource.
+ *
+ * @param {string} modelName - Le nom du modèle à utiliser pour récupérer la ressource (par exemple, 'Book').
+ * @returns {Function} Middleware Express pour l'autorisation.
+ *
+ * @example
+ * // Utilisation dans une route Express
+ * const { authorizeOwner } = require('./middlewares/authMiddleware');
+ * app.get('/books/:id', authorizeOwner('Book'), (req, res) => {
+ *   // Logique de la route
+ * });
+ *
+ * @throws {Error} Si le modèle est invalide ou si une erreur se produit lors de la récupération de la ressource.
+ */
 export const authorizeOwner = (modelName) => {
   return async (req, res, next) => {
     try {
@@ -37,9 +52,8 @@ export const authorizeOwner = (modelName) => {
 
 export const authorizeUser = (req, res, next) => {
   const { id } = req.params; // ID de l'utilisateur ciblé
-  if (req.currentUserId !== id) {
-    return res.status(403).send({ error: 'Forbidden: You do not have permission to perform this action' + req.currentUserId });
+  if (req.currentUserId !== id.toString()) {
+    return res.status(403).send({ error: 'Forbidden: You do not have permission to perform this action' });
   }
   next();
 };
-

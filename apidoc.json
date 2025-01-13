@@ -1,0 +1,10 @@
+{
+    "name": "booknest-restapi",
+    "version": "1.0.0",
+    "description": "Project on a course of the heig-vd in archioweb",
+    "title": "Booknest RestAPI Documentation",
+    "url" : "https://booknest-restapi.onrender.com",
+    "header": {
+        "filename": "APIDOC.md"
+      }
+  }
