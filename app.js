@@ -57,6 +57,9 @@ app.use("/openapi", swaggerUi.serve, swaggerUi.setup(openApiDocument));
 
 // Define __dirname for ES modules
 const __dirname = dirname(fileURLToPath(import.meta.url));
+
+app.use(express.static(path.join(__dirname, "public")));
+
 // Route pour la page d'accueil
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "views", "docs.html"));
