@@ -29,6 +29,8 @@ if (config.debug) {
 }
 
 const app = express();
+// Autoriser toutes les origines
+app.use(cors({ origin: '*', methods: 'GET,POST,PUT,DELETE,OPTIONS', credentials: true }));
 
 // Configuration de la vue
 app.set("views", path.join(config.projectRoot, "views"));
@@ -52,12 +54,6 @@ app.use("/api/seeds", seederRoutes); // Routes pour inséré des données
 // Routes d'administration
 app.use("/admin", adminRoutes);
 
-// Autoriser toutes les origines
-app.use(cors({
-  origin: '*',
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
-  credentials: true
-}));
 
 // Parse the OpenAPI document.
 const openApiDocument = yaml.load(fs.readFileSync("./openapi.yml"));
@@ -106,6 +102,7 @@ app.use("/api", function (err, req, res, next) {
 
   res.send(response);
 });
+
 
 // Gestion des erreurs génériques (HTML)
 app.use(function (err, req, res, next) {
