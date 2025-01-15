@@ -54,9 +54,9 @@ app.use("/admin", adminRoutes);
 
 // Autoriser toutes les origines
 app.use(cors({
-  origin: ['http://localhost:5173', 'https://booknest.onrender.com'],
+  origin: '*',
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
 }));
 
 // Parse the OpenAPI document.
