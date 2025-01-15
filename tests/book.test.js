@@ -134,8 +134,8 @@ test("PUT /api/books/:id - Mettre à jour un livre avec succès", async () => {
   // Vérifie que tous les genres mis à jour sont présents
   expect(res.body.genres).toEqual(
     expect.arrayContaining([
-      expect.objectContaining({ _id: genre._id.toString() }),
-      expect.objectContaining({ _id: genre2._id.toString() }),
+      genre._id.toString(),
+      genre2._id.toString(),
     ])
   );  });
   

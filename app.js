@@ -17,7 +17,10 @@ import genreRoutes from "./src/routes/GenreRoute.js"; // Routes pour les genres
 import userRoutes from "./src/routes/UserRoute.js"; // Routes pour les utilisateurs
 import authRoutes from "./src/routes/AuthorRoute.js"; // Routes pour l'authentification
 import seederRoutes from "./src/routes/Seeder.js"; // Routes pour l'authentification
-import cors from 'cors';
+
+import cors from "cors"; // Utiliser "import" pour les modules
+
+
 // Connexion à MongoDB
 await mongoose.connect(config.databaseUrl);
 
@@ -50,7 +53,11 @@ app.use("/api/seeds", seederRoutes); // Routes pour inséré des données
 app.use("/admin", adminRoutes);
 
 // Autoriser toutes les origines
-app.use(cors());
+app.use(cors({
+  origin: ['http://localhost:5173/', 'https://booknest.onrender.com/'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+}));
 
 // Parse the OpenAPI document.
 const openApiDocument = yaml.load(fs.readFileSync("./openapi.yml"));
