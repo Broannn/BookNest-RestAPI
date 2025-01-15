@@ -17,7 +17,7 @@ import genreRoutes from "./src/routes/GenreRoute.js"; // Routes pour les genres
 import userRoutes from "./src/routes/UserRoute.js"; // Routes pour les utilisateurs
 import authRoutes from "./src/routes/AuthorRoute.js"; // Routes pour l'authentification
 import seederRoutes from "./src/routes/Seeder.js"; // Routes pour l'authentification
-
+import cors from 'cors';
 // Connexion à MongoDB
 await mongoose.connect(config.databaseUrl);
 
@@ -48,8 +48,11 @@ app.use("/api/seeds", seederRoutes); // Routes pour inséré des données
 
 // Routes d'administration
 app.use("/admin", adminRoutes);
-// Parse the OpenAPI document.
 
+// Autoriser toutes les origines
+app.use(cors());
+
+// Parse the OpenAPI document.
 const openApiDocument = yaml.load(fs.readFileSync("./openapi.yml"));
 
 // Serve the Swagger UI documentation.
