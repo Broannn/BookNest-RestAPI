@@ -1,6 +1,6 @@
 {
   "name": "booknest-restapi",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "project on a course of the heig-vd in archioweb",
   "main": "app.js",
   "type": "module",

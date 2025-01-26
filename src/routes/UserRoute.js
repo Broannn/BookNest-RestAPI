@@ -147,7 +147,7 @@ router.get('/:id', (req, res, next) => {
  *     }
  * @apiError 404 Utilisateur introuvable
  */
-router.get('/:email', (req, res, next) => {
+router.get('/email/:email', (req, res, next) => {
   User.findOne({ email: req.params.email })
     .then(user => {
       if (!user) {
