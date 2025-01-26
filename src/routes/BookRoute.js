@@ -224,6 +224,40 @@ router.delete('/:id', (req, res, next) => {
     .catch(next);
 });
 
+/**
+ * @api {get} /api/books/genre/:genreId Récupérer les livres par genre
+ * @apiName GetBooksByGenre
+ * @apiGroup Livre
+ * @apiVersion 1.0.0
+ * @apiDescription Récupère une liste de livres associés à un genre spécifique.
+ *
+ * @apiParam {String} genreId ID du genre
+ * @apiSuccess {Object[]} books Liste des livres
+ * @apiSuccessExample {json} 200 OK
+ *     HTTP/1.1 200 OK
+ *     [
+ *       {
+ *         "id": "12345",
+ *         "title": "Mon Livre",
+ *         "author_id": "67890",
+ *         "genres": ["fantasy", "adventure"]
+ *       }
+ *     ]
+ * @apiError 404 Genre non trouvé
+ */
+router.get("/genre/:genreId", async (req, res, next) => {
+  const { genreId } = req.params;
+
+  try {
+    const books = await Book.find({ genres: genreId }).populate("author_id genres");
+    if (!books.length) {
+      return res.status(404).send({ message: "Genre non trouvé" });
+    }
+    res.status(200).send(books);
+  } catch (err) {
+    next(err);
+  }
+});
 
 
 // Genre du livre
@@ -438,6 +472,32 @@ router.get("/bod", async (req, res, next) => {
   try {
     const booksOfDay = await getBooksOfDay();
     res.status(200).send(booksOfDay);
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * @api {delete} /api/books/bod/:bookOfDayId Supprimer un livre du jour
+ * @apiName DeleteBookOfDay
+ * @apiGroup LivreDuJour
+ * @apiVersion 1.0.0
+ * @apiDescription Supprime un livre du jour par son ID.
+ *
+ * @apiParam {String} bookOfDayId ID du livre du jour
+ * @apiSuccessExample {json} 204 Aucun contenu
+ *     HTTP/1.1 204 Aucun contenu
+ * @apiError 404 Livre du jour non trouvé
+ */
+router.delete("/bod/:bookOfDayId", async (req, res, next) => {
+  const { bookOfDayId } = req.params;
+
+  try {
+    const result = await BookOfDay.findByIdAndDelete(bookOfDayId);
+    if (!result) {
+      return res.status(404).send({ message: "Livre du jour non trouvé" });
+    }
+    res.status(204).send();
   } catch (err) {
     next(err);
   }

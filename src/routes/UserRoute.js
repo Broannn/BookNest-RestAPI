@@ -130,6 +130,36 @@ router.get('/:id', (req, res, next) => {
 });
 
 /**
+ * @api {get} /api/users/:email Récupérer un utilisateur par email
+ * @apiName GetUserByEmail
+ * @apiGroup Utilisateur
+ * @apiVersion 1.0.0
+ * @apiDescription Retourne les détails d'un utilisateur spécifique par email.
+ *
+ * @apiParam {String} email Adresse e-mail de l'utilisateur
+ * @apiSuccess {Object} user Détails de l'utilisateur
+ * @apiSuccessExample {json} 200 OK
+ *     HTTP/1.1 200 OK
+ *     {
+ *       "id": "12345",
+ *       "username": "user1",
+ *       "email": "user1@example.com"
+ *     }
+ * @apiError 404 Utilisateur introuvable
+ */
+router.get('/:email', (req, res, next) => {
+  User.findOne({ email: req.params.email })
+    .then(user => {
+      if (!user) {
+        res.status(404).send({ error: 'Utilisateur introuvable.' });
+      } else {
+        res.status(200).send(user);
+      }
+    })
+    .catch(next);
+});
+
+/**
  * @api {put} /api/users/:id Mettre à jour un utilisateur
  * @apiName UpdateUser
  * @apiGroup Utilisateur
