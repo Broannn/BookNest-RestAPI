@@ -117,7 +117,7 @@ app.use(function (err, req, res, next) {
 
 // Serveur HTTP (nécessaire pour partager avec WebSocket)
 const server = http.createServer(app);
-const PORT = process.env.PORT || 3000;
+const PORT = 3000;
 // Serveur WebSocket
 const wss = new WebSocketServer({ port: PORT });
 
