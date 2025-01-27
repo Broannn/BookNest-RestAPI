@@ -27,6 +27,57 @@ app.set('port', port);
 // Create HTTP server
 const server = http.createServer(app);
 
+const wss = new WebSocketServer({ server });
+
+// Stocker les connexions WebSocket par livre
+const connections = {};
+
+// Configurer le WebSocket pour gérer les connexions et les messages
+wss.on("connection", (ws, req) => {
+  try {
+    // Extraire l'ID du livre à partir de l'URL de connexion
+    const url = new URL(req.url, `http://${req.headers.host}`);
+    const bookId = url.pathname.split("/")[3]; // /api/books/:bookId/critiques
+
+    if (!bookId) {
+      ws.close();
+      console.log("Connexion WebSocket fermée : bookId manquant.");
+      return;
+    }
+
+    // Ajouter la connexion pour le livre
+    if (!connections[bookId]) connections[bookId] = [];
+    connections[bookId].push(ws);
+    console.log(`Connexion WebSocket établie pour le livre ${bookId}`);
+
+    // Gérer les messages envoyés par le client
+    ws.on("message", (data) => {
+      console.log(`Message reçu pour le livre ${bookId} :`, data);
+
+      // Diffuser le message à tous les clients connectés à ce livre
+      connections[bookId].forEach((client) => {
+        if (client !== ws && client.readyState === WebSocket.OPEN) {
+          client.send(data); // Répandre le message aux autres clients
+        }
+      });
+    });
+
+    // Supprimer la connexion lorsqu'elle est fermée
+    ws.on("close", () => {
+      connections[bookId] = connections[bookId].filter((client) => client !== ws);
+      console.log(`Connexion WebSocket fermée pour le livre ${bookId}`);
+    });
+
+    // Gérer les erreurs
+    ws.on("error", (error) => {
+      console.error(`Erreur WebSocket pour le livre ${bookId} :`, error);
+    });
+  } catch (error) {
+    console.error("Erreur lors de la configuration de WebSocket :", error);
+    ws.close();
+  }
+});
+
 // Listen on provided port, on all network interfaces
 server.listen(port);
 server.on('error', onError);
