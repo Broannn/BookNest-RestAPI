@@ -59,8 +59,5 @@ const critiqueSchema = new mongoose.Schema({
   }
 }, { timestamps: true });
 
-// Assurer une critique unique par utilisateur et par livre
-critiqueSchema.index({ user_id: 1, book_id: 1 }, { unique: true });
-
 // Modèle
 export default mongoose.model('Critique', critiqueSchema);
