@@ -117,29 +117,43 @@ app.use(function (err, req, res, next) {
 
 
 
-
 // Serveur HTTP (nécessaire pour partager avec WebSocket)
 const server = http.createServer(app);
 
 // Serveur WebSocket
-const wss = new WebSocketServer({ server });
+const wss = new WebSocketServer({ noServer: true }); // Utilisation de `noServer` pour contrôler la mise à niveau manuellement
 
 // Stocker les connexions WebSocket par livre
 const connections = {};
 
+// Gérer la mise à niveau HTTP vers WebSocket
+server.on("upgrade", (request, socket, head) => {
+  const url = new URL(request.url, `http://${request.headers.host}`);
+  const pathname = url.pathname;
+
+  // Vérifier que l'URL correspond au chemin attendu
+  if (!pathname.startsWith("/api/books/") || !pathname.endsWith("/critiques")) {
+    socket.write("HTTP/1.1 404 Not Found\r\n\r\n");
+    socket.destroy();
+    return;
+  }
+
+  const bookId = pathname.split("/")[3]; // Extraire bookId
+  if (!bookId) {
+    socket.write("HTTP/1.1 400 Bad Request\r\n\r\n");
+    socket.destroy();
+    console.error("Connexion WebSocket refusée : bookId manquant.");
+    return;
+  }
+
+  wss.handleUpgrade(request, socket, head, (ws) => {
+    wss.emit("connection", ws, request, bookId); // Passer bookId à la connexion
+  });
+});
+
 // Configurer le WebSocket pour gérer les connexions et les messages
-wss.on("connection", (ws, req) => {
+wss.on("connection", (ws, req, bookId) => {
   try {
-    // Extraire l'ID du livre à partir de l'URL de connexion
-    const url = new URL(req.url, `http://${req.headers.host}`);
-    const bookId = url.pathname.split("/")[3]; // /api/books/:bookId/critiques
-
-    if (!bookId) {
-      ws.close();
-      console.log("Connexion WebSocket fermée : bookId manquant.");
-      return;
-    }
-
     // Ajouter la connexion pour le livre
     if (!connections[bookId]) connections[bookId] = [];
     connections[bookId].push(ws);
@@ -168,15 +182,18 @@ wss.on("connection", (ws, req) => {
       console.error(`Erreur WebSocket pour le livre ${bookId} :`, error);
     });
   } catch (error) {
-    console.error("Erreur lors de la configuration de WebSocket :", error);
+    console.error("Erreur lors de la gestion de la connexion WebSocket :", error);
     ws.close();
   }
 });
 
 // Lancer le serveur HTTP et WebSocket
-server.listen(3000, () => {
+const PORT = process.env.PORT || 3000; // Utiliser le port fourni par Render ou 3000 par défaut
+server.listen(PORT, () => {
   console.log(`Serveur en cours d'exécution sur https://booknest-restapi.onrender.com/`);
-  console.log(`WebSocket disponible sur ws://booknest-restapi.onrender.com/api/books/:bookId/critiques`);
+  console.log(`WebSocket disponible sur wss://booknest-restapi.onrender.com/api/books/:bookId/critiques`);
 });
+
+
 
 export default app;
