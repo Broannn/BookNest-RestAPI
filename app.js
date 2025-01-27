@@ -8,7 +8,8 @@ import yaml from "js-yaml";
 import swaggerUi from "swagger-ui-express";
 import { dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { WebSocket } from 'ws';
+import { WebSocketServer } from 'ws';
+import http from 'http';
 
 import * as config from "./config.js"; // Configuration
 import rootApi from "./src/routes/api.js"; // Routes principales
@@ -114,8 +115,11 @@ app.use(function (err, req, res, next) {
   res.render("error");
 });
 
+// Serveur HTTP (nécessaire pour partager avec WebSocket)
+const server = http.createServer(app);
 const PORT = process.env.PORT || 3000;
-const wss = new WebSocket.Server({ port: PORT })
+// Serveur WebSocket
+const wss = new WebSocketServer({ port: PORT });
 
 // Stocker les connexions WebSocket par livre
 const connections = {};
