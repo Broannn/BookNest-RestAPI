@@ -170,11 +170,6 @@ wss.on("connection", (ws, req) => {
   }
 });
 
-// Lancer le serveur HTTP et WebSocket
-server.listen(PORT, () => {
-  console.log('Serveur en cours d\'exécution sur https://booknest-restapi.onrender.com/');
-  console.log('WebSocket disponible sur ws://booknest-restapi.onrender.com/api/books/:bookId/critiques');
-});
 
 
 
