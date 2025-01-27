@@ -188,7 +188,7 @@ wss.on("connection", (ws, req, bookId) => {
 });
 
 // Lancer le serveur HTTP et WebSocket
-const PORT = process.env.PORT || 3000; // Utiliser le port fourni par Render ou 3000 par défaut
+const PORT = 3000; // Utiliser le port fourni par Render ou 3000 par défaut
 server.listen(PORT, () => {
   console.log(`Serveur en cours d'exécution sur https://booknest-restapi.onrender.com/`);
   console.log(`WebSocket disponible sur wss://booknest-restapi.onrender.com/api/books/:bookId/critiques`);
