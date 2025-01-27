@@ -8,8 +8,7 @@ import yaml from "js-yaml";
 import swaggerUi from "swagger-ui-express";
 import { dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { WebSocketServer } from 'ws';
-import http from 'http';
+import { WebSocket } from 'ws';
 
 import * as config from "./config.js"; // Configuration
 import rootApi from "./src/routes/api.js"; // Routes principales
@@ -115,7 +114,6 @@ app.use(function (err, req, res, next) {
   res.render("error");
 });
 
-const WebSocket = require('ws')
 const PORT = process.env.PORT || 3000;
 const wss = new WebSocket.Server({ port: PORT })
 
