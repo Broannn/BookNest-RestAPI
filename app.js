@@ -8,8 +8,7 @@ import yaml from "js-yaml";
 import swaggerUi from "swagger-ui-express";
 import { dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { WebSocketServer } from 'ws';
-import http from 'http';
+
 
 import * as config from "./config.js"; // Configuration
 import rootApi from "./src/routes/api.js"; // Routes principales
