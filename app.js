@@ -119,7 +119,7 @@ app.use(function (err, req, res, next) {
 const server = http.createServer(app);
 const PORT = process.env.PORT || 3000;
 // Serveur WebSocket
-const wss = new WebSocketServer({ port: PORT });
+const wss = new WebSocketServer({ server });
 
 // Stocker les connexions WebSocket par livre
 const connections = {};
@@ -169,7 +169,11 @@ wss.on("connection", (ws, req) => {
     ws.close();
   }
 });
-
+// Lancer le serveur HTTP et WebSocket
+server.listen(PORT, () => {
+  console.log(`Serveur en cours d'exécution sur http://localhost:${PORT}`);
+  console.log(`WebSocket disponible sur ws://localhost:${PORT}/api/books/:bookId/critiques`);
+});
 
 
 
