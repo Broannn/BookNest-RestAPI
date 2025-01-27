@@ -616,12 +616,22 @@ router.get('/:bookId/critiques', async (req, res, next) => {
  *       "comment": "Excellent livre."
  *     }
  */
+// Fonction pour diffuser un avis à tous les clients connectés à un livre
+const broadcastReview = (bookId, review) => {
+  if (connections[bookId]) {
+    connections[bookId].forEach((ws) => {
+      ws.send(JSON.stringify(review));
+    });
+    console.log(`Avis diffusé aux clients WebSocket pour le livre ${bookId}`);
+  }
+};
 router.post('/:bookId/critiques', async (req, res, next) => {
   const { userId, rating, comment } = req.body;
   const { bookId } = req.params;
-
-  try {
-    const critique = await addCritique(userId, bookId, rating, comment);
+    // Diffuser l'avis aux clients connectés
+    try {
+      const critique = await addCritique(userId, bookId, rating, comment);
+      broadcastReview(bookId, critique);
     res.status(201).send(critique);
   } catch (err) {
     next(err);

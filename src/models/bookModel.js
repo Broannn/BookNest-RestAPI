@@ -58,6 +58,14 @@ const bookSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  isbn: {
+    type: String,
+    required: true
+  },
+  num_page: {
+    type: Number,
+    required: true
+  },
   cover_image: {
     type: String
   },

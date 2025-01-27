@@ -8,6 +8,8 @@ import yaml from "js-yaml";
 import swaggerUi from "swagger-ui-express";
 import { dirname } from 'path';
 import { fileURLToPath } from 'url';
+import { WebSocketServer } from 'ws';
+import http from 'http';
 
 import * as config from "./config.js"; // Configuration
 import rootApi from "./src/routes/api.js"; // Routes principales
@@ -111,6 +113,70 @@ app.use(function (err, req, res, next) {
 
   res.status(err.status || 500);
   res.render("error");
+});
+
+
+
+
+// Serveur HTTP (nécessaire pour partager avec WebSocket)
+const server = http.createServer(app);
+
+// Serveur WebSocket
+const wss = new WebSocketServer({ server });
+
+// Stocker les connexions WebSocket par livre
+const connections = {};
+
+// Configurer le WebSocket pour gérer les connexions et les messages
+wss.on("connection", (ws, req) => {
+  try {
+    // Extraire l'ID du livre à partir de l'URL de connexion
+    const url = new URL(req.url, `http://${req.headers.host}`);
+    const bookId = url.pathname.split("/")[3]; // /api/books/:bookId/critiques
+
+    if (!bookId) {
+      ws.close();
+      console.log("Connexion WebSocket fermée : bookId manquant.");
+      return;
+    }
+
+    // Ajouter la connexion pour le livre
+    if (!connections[bookId]) connections[bookId] = [];
+    connections[bookId].push(ws);
+    console.log(`Connexion WebSocket établie pour le livre ${bookId}`);
+
+    // Gérer les messages envoyés par le client
+    ws.on("message", (data) => {
+      console.log(`Message reçu pour le livre ${bookId} :`, data);
+
+      // Diffuser le message à tous les clients connectés à ce livre
+      connections[bookId].forEach((client) => {
+        if (client !== ws && client.readyState === WebSocket.OPEN) {
+          client.send(data); // Répandre le message aux autres clients
+        }
+      });
+    });
+
+    // Supprimer la connexion lorsqu'elle est fermée
+    ws.on("close", () => {
+      connections[bookId] = connections[bookId].filter((client) => client !== ws);
+      console.log(`Connexion WebSocket fermée pour le livre ${bookId}`);
+    });
+
+    // Gérer les erreurs
+    ws.on("error", (error) => {
+      console.error(`Erreur WebSocket pour le livre ${bookId} :`, error);
+    });
+  } catch (error) {
+    console.error("Erreur lors de la configuration de WebSocket :", error);
+    ws.close();
+  }
+});
+
+// Lancer le serveur HTTP et WebSocket
+server.listen(3000, () => {
+  console.log(`Serveur en cours d'exécution sur https://booknest-restapi.onrender.com/`);
+  console.log(`WebSocket disponible sur ws://booknest-restapi.onrender.com/api/books/:bookId/critiques`);
 });
 
 export default app;
