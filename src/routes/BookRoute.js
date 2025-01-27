@@ -628,13 +628,18 @@ const broadcastReview = (bookId, review) => {
 router.post('/:bookId/critiques', async (req, res, next) => {
   const { userId, rating, comment } = req.body;
   const { bookId } = req.params;
-    // Diffuser l'avis aux clients connectés
-    try {
-      const critique = await addCritique(userId, bookId, rating, comment);
-      broadcastReview(bookId, critique);
+
+  if (!userId || !bookId || !rating || !comment) {
+    return res.status(400).json({ message: "Champs requis manquants." });
+  }
+
+  try {
+    const critique = await addCritique(userId, bookId, rating, comment);
+    broadcastReview(bookId, critique);
     res.status(201).send(critique);
-  } catch (err) {
-    next(err);
+  } catch (error) {
+    console.error("Erreur lors de l'ajout de la critique :", error);
+    res.status(500).json({ message: "Erreur interne du serveur." });
   }
 });
 
