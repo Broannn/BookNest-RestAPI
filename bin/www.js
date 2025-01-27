@@ -7,7 +7,6 @@ import path from 'path';
 import app from '../app.js';
 import * as config from '../config.js';
 import { WebSocketServer } from 'ws';
-import http from 'http';
 
 
 
